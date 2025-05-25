@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qu'est-ce qu'on cuisine ? - Chercheur de Recettes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom Tailwind Configuration (optional, for specific fonts/colors) */
+        /* You can extend Tailwind's default theme here if needed */
+        /* For this example, we'll rely mostly on default Tailwind classes and custom CSS */
+        
+        /* Styles personnalisés pour la police Inter et le style de base du corps */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #cbe7f7 100%); /* Doux dégradé bleu-ciel */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Aligner en haut pour permettre le défilement */
+            min-height: 100vh; /* S'assurer qu'il prend toute la hauteur de la fenêtre */
+            padding: 30px; /* Plus de rembourrage global */
+            box-sizing: border-box;
+        }
+        /* Barre de défilement personnalisée pour une meilleure esthétique */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e0f2f7; /* Couleur de la piste de défilement */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #81d4fa; /* Couleur du pouce de défilement */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4fc3f7; /* Couleur du pouce de défilement au survol */
+        }
+
+        /* Modal specific styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.75); /* Black with more opacity */
+            backdrop-filter: blur(10px); /* Frosted glass effect, stronger */
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 40px; /* Even more padding */
+            border-radius: 25px; /* Even more rounded corners */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); /* Stronger, softer shadow */
+            width: 95%; /* Wider modal */
+            max-width: 900px; /* Max width for larger screens */
+            max-height: 90vh; /* Limit height to enable scrolling within modal */
+            overflow-y: auto; /* Scroll for content if too long */
+            position: relative;
+            animation: fadeInScale 0.5s ease-out; /* Slower, smoother animation */
+        }
+        .close-button {
+            color: #a0a0a0; /* Softer close button color */
+            position: absolute;
+            top: 25px; /* Adjusted position */
+            right: 35px; /* Adjusted position */
+            font-size: 40px; /* Larger close button */
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease, transform 0.3s ease; /* Add transform for hover effect */
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #777;
+            transform: rotate(90deg) scale(1.1); /* Rotate and slightly scale on hover */
+        }
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.85); /* Start smaller */
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Loading spinner animation */
+        .loader {
+            border: 5px solid #e0f2f7; /* Light grey */
+            border-top: 5px solid #007bff; /* Vibrant blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom animation for header utensil icon */
+        .animate-bounce-subtle {
+            animation: bounceSubtle 2s infinite ease-in-out;
+        }
+        @keyframes bounceSubtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-10 bg-white rounded-3xl shadow-2xl w-full max-w-6xl border border-blue-100">
+        <h1 class="text-7xl font-extrabold text-center text-gray-800 mb-16 pb-8 border-b-4 border-blue-400 tracking-tight leading-tight">
+            <i class="fas fa-utensils text-blue-600 mr-6 animate-bounce-subtle"></i> Qu'est-ce qu'on cuisine ?
+        </h1>
+
+        <div class="flex flex-col sm:flex-row gap-6 mb-16">
+            <input
+                type="text"
+                id="ingredientInput"
+                placeholder="Entrez les ingrédients (ex: poulet, pâtes, tomates)"
+                class="flex-1 p-6 border-3 border-blue-300 rounded-3xl focus:outline-none focus:ring-6 focus:ring-blue-500 text-2xl transition duration-300 shadow-lg placeholder-gray-400"
+            />
+            <button
+                id="searchButton"
+                class="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold rounded-3xl shadow-2xl hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-6 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 transform hover:scale-105 flex items-center justify-center gap-3 text-xl uppercase tracking-wider"
+            >
+                <i class="fas fa-search text-white"></i> Trouver des recettes
+            </button>
+        </div>
+
+        <div id="loadingIndicator" class="hidden flex justify-center items-center py-12">
+            <div class="loader"></div>
+            <span class="ml-6 text-2xl font-medium text-gray-600">Recherche de recettes en cours...</span>
+        </div>
+
+        <div id="recipeResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            </div>
+
+        <div id="recipeDetailModal" class="modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeModal()">&times;</span>
+                <h2 id="modalRecipeTitle" class="text-5xl font-bold text-gray-800 mb-8 text-center leading-tight"></h2>
+                <img id="modalRecipeImage" src="" alt="Image de la recette" class="w-full h-96 object-cover rounded-2xl mb-10 shadow-xl border border-gray-200">
+                <div class="mb-10 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                    <h3 class="text-3xl font-semibold text-blue-800 mb-5 flex items-center"><i class="fas fa-list-ul mr-4 text-blue-600"></i> Ingrédients :</h3>
+                    <ul id="modalIngredientsList" class="list-disc list-inside text-gray-700 text-xl leading-relaxed space-y-3 pl-6">
+                        </ul>
+                </div>
+                <div class="p-6 bg-green-50 rounded-xl border border-green-200">
+                    <h3 class="text-3xl font-semibold text-green-800 mb-5 flex items-center"><i class="fas fa-info-circle mr-4 text-green-600"></i> Instructions :</h3>
+                    <div id="modalInstructions" class="prose max-w-none text-gray-700 text-xl leading-relaxed">
+                        </div>
+                </div>
+                <p class="text-base text-gray-500 mt-10 text-center italic">
+                    Note : Les noms de recettes, les ingrédients et les instructions sont fournis par l'API Edamam et peuvent être en anglais. Les instructions complètes sont souvent sur le site d'origine.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Vos clés API Edamam
+        const APP_ID = 'bbf78c38'; 
+        const APP_KEY = '56bd36cda1fa6f259c612645adc79e88';
+        // Votre ID utilisateur Edamam, requis pour cette application spécifique
+        const EDAMAM_USER_ID = 'Rinoxx1';
+
+        const ingredientInput = document.getElementById('ingredientInput');
+        const searchButton = document.getElementById('searchButton');
+        const recipeResults = document.getElementById('recipeResults');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        const recipeDetailModal = document.getElementById('recipeDetailModal');
+        const modalRecipeTitle = document.getElementById('modalRecipeTitle');
+        const modalRecipeImage = document.getElementById('modalRecipeImage');
+        const modalIngredientsList = document.getElementById('modalIngredientsList');
+        const modalInstructions = document.getElementById('modalInstructions');
+
+        // Variable globale pour stocker les recettes actuelles pour un accès facile
+        let currentRecipes = [];
+
+        /**
+         * Event listener for the search button.
+         * Fetches recipes based on entered ingredients using Edamam API.
+         */
+        searchButton.addEventListener('click', async () => {
+            const ingredients = ingredientInput.value.split(',').map(item => item.trim()).filter(item => item !== '');
+
+            if (ingredients.length === 0) {
+                displayMessage('Veuillez entrer au moins un ingrédient pour trouver des recettes.', 'text-red-500');
+                return;
+            }
+
+            // Vérifier si les clés API sont définies
+            if (!APP_ID || !APP_KEY || !EDAMAM_USER_ID) {
+                displayMessage('Les clés APP_ID, APP_KEY ou EDAMAM_USER_ID pour Edamam ne sont pas configurées.', 'text-red-600');
+                return;
+            }
+
+            showLoading(true);
+            recipeResults.innerHTML = ''; // Clear previous results
+
+            try {
+                // Construct the API URL for finding recipes by ingredients (Edamam)
+                const apiUrl = `https://api.edamam.com/api/recipes/v2?type=public&q=${ingredients.join(',')}&app_id=${APP_ID}&app_key=${APP_KEY}`;
+                
+                // Fetch data from Edamam API, including the required custom header
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Edamam-Account-User': EDAMAM_USER_ID
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Erreur HTTP ! statut : ${response.status} - ${errorData.message || 'Erreur inconnue'}`);
+                }
+                const data = await response.json();
+                
+                currentRecipes = data.hits || []; // Store hits globally
+                displayRecipes(currentRecipes); 
+
+            } catch (error) {
+                console.error('Erreur lors de la récupération des recettes :', error);
+                displayMessage(`Échec de la récupération des recettes : ${error.message}. Veuillez vérifier vos clés API Edamam, votre ID utilisateur, ou réessayer plus tard.`, 'text-red-500');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        /**
+         * Displays a message in the recipe results area.
+         * @param {string} message - The message to display.
+         * @param {string} colorClass - Tailwind CSS class for text color (e.g., 'text-red-500').
+         */
+        function displayMessage(message, colorClass = 'text-gray-600') {
+            recipeResults.innerHTML = `
+                <div class="col-span-full text-center py-16">
+                    <p class="text-3xl font-semibold ${colorClass}">${message}</p>
+                </div>
+            `;
+        }
+
+        /**
+         * Toggles the visibility of the loading indicator.
+         * @param {boolean} show - True to show, false to hide.
+         */
+        function showLoading(show) {
+            loadingIndicator.classList.toggle('hidden', !show);
+            searchButton.disabled = show; // Disable button while loading
+            ingredientInput.disabled = show; // Disable input while loading
+        }
+
+        /**
+         * Displays the fetched recipes as cards.
+         * @param {Array} hits - An array of hit objects from the Edamam API (each containing a recipe object).
+         */
+        function displayRecipes(hits) {
+            recipeResults.innerHTML = ''; // Clear previous results
+            if (hits.length === 0) {
+                displayMessage('Aucune recette trouvée avec ces ingrédients. Essayez différentes combinaisons ou moins d\'ingrédients !', 'text-orange-500');
+                return;
+            }
+
+            hits.forEach(hit => {
+                const recipe = hit.recipe; // Edamam structure has 'recipe' inside 'hit'
+                const recipeCard = document.createElement('div');
+                recipeCard.classList.add('recipe-card', 'bg-white', 'rounded-3xl', 'shadow-xl', 'overflow-hidden', 'transform', 'hover:scale-102', 'transition', 'duration-300', 'cursor-pointer', 'flex', 'flex-col', 'group', 'relative'); /* Added group for hover effects */
+                
+                const imageUrl = recipe.image || `https://placehold.co/400x300/e0f2f7/64b5f6?text=${encodeURIComponent(recipe.label)}`;
+
+                recipeCard.innerHTML = `
+                    <div class="relative overflow-hidden rounded-t-3xl">
+                        <img src="${imageUrl}" alt="${recipe.label}" class="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-115" onerror="this.onerror=null;this.src='https://placehold.co/400x300/e0f2f7/64b5f6?text=Image+introuvable';">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-6">
+                            <span class="text-white text-3xl font-bold leading-tight">${recipe.label}</span>
+                        </div>
+                    </div>
+                    <div class="p-8 flex-grow flex flex-col">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4">${recipe.label}</h3>
+                        <div class="flex-grow text-gray-600 text-lg space-y-2">
+                            <p><i class="fas fa-book mr-4 text-blue-500"></i>Source : <span class="font-semibold">${recipe.source}</span></p>
+                            <p><i class="fas fa-utensils mr-4 text-blue-500"></i>Ingrédients : <span class="font-semibold">${recipe.ingredientLines ? recipe.ingredientLines.length : 'N/A'}</span></p>
+                        </div>
+                        <button 
+                            onclick="openRecipeDetails('${recipe.uri}')" 
+                            class="mt-8 w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-4 px-6 rounded-2xl hover:from-blue-600 hover:to-blue-800 transition duration-300 font-semibold shadow-lg transform hover:translate-y-[-3px] flex items-center justify-center gap-3 text-xl"
+                        >
+                            Voir la recette <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                `;
+                recipeResults.appendChild(recipeCard);
+            });
+        }
+
+        /**
+         * Opens the modal and displays full recipe details from the fetched Edamam data.
+         * @param {string} recipeUri - The URI of the recipe to display details for.
+         */
+        async function openRecipeDetails(recipeUri) {
+            const hit = currentRecipes.find(h => h.recipe.uri === recipeUri);
+            if (!hit) {
+                modalRecipeTitle.textContent = 'Recette introuvable';
+                modalIngredientsList.innerHTML = '<li class="text-red-500">Désolé, les détails de cette recette n\'ont pas pu être chargés.</li>';
+                modalInstructions.innerHTML = '<p class="text-red-500">Désolé, les détails de cette recette n\'ont pas pu être chargés.</p>';
+                recipeDetailModal.style.display = 'flex';
+                return;
+            }
+            const recipe = hit.recipe;
+
+            modalRecipeTitle.textContent = recipe.label;
+            modalRecipeImage.src = recipe.image || `https://placehold.co/800x400/e0f2f7/64b5f6?text=${encodeURIComponent(recipe.label)}`;
+            modalRecipeImage.onerror = function() { this.onerror=null; this.src='https://placehold.co/800x400/e0f2f7/64b5f6?text=Image+introuvable'; };
+
+            modalIngredientsList.innerHTML = '';
+            if (recipe.ingredientLines && recipe.ingredientLines.length > 0) {
+                recipe.ingredientLines.forEach(ingredient => {
+                    const li = document.createElement('li');
+                    li.textContent = ingredient;
+                    modalIngredientsList.appendChild(li);
+                });
+            } else {
+                modalIngredientsList.innerHTML = '<li class="text-gray-500">Aucun ingrédient détaillé disponible.</li>';
+            }
+
+            // For instructions, provide a link to the external recipe page as Edamam often doesn't provide full instructions in API response directly
+            modalInstructions.innerHTML = `
+                <p class="text-gray-700 mb-5">Les instructions complètes sont disponibles sur le site d'origine de la recette :</p>
+                <a href="${recipe.url}" target="_blank" class="inline-block bg-gradient-to-r from-blue-500 to-blue-700 text-white py-4 px-8 rounded-xl hover:from-blue-600 hover:to-blue-800 transition duration-300 font-semibold shadow-md transform hover:scale-105">
+                    Voir les instructions complètes <i class="fas fa-external-link-alt ml-3"></i>
+                </a>
+            `;
+
+            recipeDetailModal.style.display = 'flex'; // Show modal
+        }
+
+        /**
+         * Closes the recipe detail modal.
+         */
+        function closeModal() {
+            recipeDetailModal.style.display = 'none';
+        }
+
+        // Close modal when clicking outside of the content
+        window.onclick = function(event) {
+            if (event.target == recipeDetailModal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
